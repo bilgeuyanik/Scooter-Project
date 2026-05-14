@@ -59,6 +59,15 @@ export class IncidentsController {
   }
 
   @UseGuards(AuthGuard)
+  @Patch(':id')
+  async updateIncident(
+    @Param('id') id: string,
+    @Body() updateIncidentDto: UpdateIncidentDto,
+  ) {
+    return this.incidentsService.update(+id, updateIncidentDto);
+  }
+
+  @UseGuards(AuthGuard)
   @Patch(':id/resolve')
   async resolveIncident(@Param('id') id: string) {
     return this.incidentsService.resolveIncident(+id);

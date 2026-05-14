@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import axios from 'axios';
 import { useScooters } from '../contexts/ScooterContext';
+import { INCIDENT_LABELS } from '../constants/incidentTypes';
 import scooterImg from '../assets/scooters.png';
 import batteryImg from '../assets/battery.png';
 import ekleImg from '../assets/ekle.png';
@@ -13,6 +15,9 @@ import bakimImg from '../assets/bakim.png';
 import analizImg from '../assets/analiz.png';
 import kutuImg from '../assets/kutu.png';
 import opfonImg from '../assets/opfon.png';
+import robotImg from '../assets/robot.png';
+import analizoperatorImg from '../assets/analizoperator.png';
+import cuteImg from '../assets/cute.png';
 
 const getScooterIcon = (battery: number) => {
   let color = '#27ae60';
@@ -27,6 +32,59 @@ const getScooterIcon = (battery: number) => {
   });
 };
 
+const getIncidentIcon = (severity?: string) => {
+  let color = '#f39c12';
+  if (severity === 'Yüksek') color = '#e74c3c';
+  else if (severity === 'Orta') color = '#f39c12';
+  else if (severity === 'Düşük') color = '#3498db';
+
+  return L.divIcon({
+    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: white;">🚨</div>`,
+    className: 'incident-pin',
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+  });
+};
+
+interface Incident {
+  id: number;
+  lat: number;
+  lon: number;
+  type: string;
+  address?: string;
+  description?: string;
+  severity?: 'Düşük' | 'Orta' | 'Yüksek';
+  operatorNotes?: string;
+  briefExplanation?: string;
+  report_count: number;
+  createdAt: string;
+  isResolved: boolean;
+}
+
+interface AnomalyAnalysisResult {
+  anomalies: Array<{
+    incidentIds: number[];
+    pattern: string;
+    severity: string;
+    affectedAreas: string[];
+    riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  }>;
+  patterns: Array<{
+    type: string;
+    frequency: string;
+    trend: string;
+    locations: string[];
+  }>;
+  riskAssessment: {
+    overall: 'Low' | 'Medium' | 'High' | 'Critical';
+    focusAreas: string[];
+    estimatedImpact: string;
+  };
+  recommendations: string[];
+  analysisTimestamp: string;
+  totalIncidentsAnalyzed: number;
+}
+
 const OperatorDashboard = () => {
   const { scooters, addScooter, deleteScooter, updateScooter } = useScooters();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -34,6 +92,12 @@ const OperatorDashboard = () => {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'total' | 'available' | 'lowBattery' | 'maintenance' | null>(null);
+  
+  // Incident management states
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [incidentFormData, setIncidentFormData] = useState({ severity: 'Orta', operatorNotes: '', briefExplanation: '' });
   const [formData, setFormData] = useState({
     unique_name: '',
     latitude: '',
@@ -41,6 +105,16 @@ const OperatorDashboard = () => {
     battery_status: 100,
     status: 'available',
   });
+  
+  // AI Analysis states
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<AnomalyAnalysisResult | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisDateRange, setAnalysisDateRange] = useState({
+    startDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+  });
+  
   const [scooterStats, setScooterStats] = useState({ total: 0, available: 0, lowBattery: 0, maintenance: 0 });
 
   // İstatistikleri hesapla
@@ -53,6 +127,21 @@ const OperatorDashboard = () => {
     };
     setScooterStats(stats);
   }, [scooters]);
+
+  // Fetch incidents from backend
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/incidents', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        setIncidents(response.data);
+      } catch (err) {
+        console.error('Olaylar yüklenirken hata:', err);
+      }
+    };
+    fetchIncidents();
+  }, []);
 
   // Scooter ekle
   const handleAddScooter = async (e: any) => {
@@ -138,6 +227,77 @@ const OperatorDashboard = () => {
     setShowStatsModal(true);
   };
 
+  // Incident handler'ları
+  const handleSelectIncident = (incident: Incident) => {
+    setSelectedIncident(incident);
+    setIncidentFormData({
+      severity: incident.severity || 'Orta',
+      operatorNotes: incident.operatorNotes || '',
+      briefExplanation: incident.briefExplanation || '',
+    });
+    setShowIncidentModal(true);
+  };
+
+  const handleUpdateIncident = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedIncident) return;
+
+    try {
+      const response = await axios.patch(
+        `http://localhost:3000/incidents/${selectedIncident.id}`,
+        incidentFormData,
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      
+      setIncidents(incidents.map(inc => inc.id === selectedIncident.id ? response.data : inc));
+      alert('✅ Olay başarıyla güncellendi!');
+      setShowIncidentModal(false);
+      setSelectedIncident(null);
+    } catch (err: any) {
+      alert('❌ Güncelleme hatası!');
+      console.error(err);
+    }
+  };
+
+  const handleResolveIncident = async (incidentId: number) => {
+    if (!window.confirm('Bu olayı çözüldü olarak işaretlemek istediğinize emin misiniz?')) return;
+
+    try {
+      await axios.patch(
+        `http://localhost:3000/incidents/${incidentId}/resolve`,
+        {},
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      
+      // Incidents listesini güncelle - çözülen incident'ı kaldır
+      setIncidents(incidents.filter(inc => inc.id !== incidentId));
+      alert('✅ Olay çözüldü olarak işaretlendi!');
+      setShowIncidentModal(false);
+      setSelectedIncident(null);
+    } catch (err) {
+      alert('❌ İşlem hatası!');
+      console.error(err);
+    }
+  };
+
+  const handleAnalyzeIncidents = async () => {
+    setAnalysisLoading(true);
+    try {
+      const response = await axios.post(
+        `http://localhost:3000/ai-analysis/analyze?startDate=${analysisDateRange.startDate}&endDate=${analysisDateRange.endDate}`,
+        {},
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      setAnalysisResults(response.data);
+      setShowAnalysisModal(true);
+    } catch (err: any) {
+      alert('❌ Analiz hatası: ' + (err.response?.data?.message || err.message));
+      console.error(err);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   return (
     <div style={{ height: '100vh', width: '100vw', position: 'relative', overflow: 'hidden', backgroundColor: '#ffb703' }}>
       {/* Header */}
@@ -158,7 +318,7 @@ const OperatorDashboard = () => {
             100% { transform: scale(1); opacity: 1; }
           }
           .leaflet-popup-content-wrapper {
-            background-color: #2d3436 !important;
+            background-color: #f5f1e8b0!important;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             color: white;
@@ -227,6 +387,18 @@ const OperatorDashboard = () => {
             </h4>
             <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#004B49' }}>{scooterStats.maintenance}</p>
           </button>
+
+          {/* AI Analysis Button */}
+          <div style={{ marginTop: 'auto', paddingTop: '15px', borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <button 
+              onClick={() => setShowAnalysisModal(true)}
+              style={{ background: 'linear-gradient(135deg, #F5F1E8 0%, #F0F8FB 100%)', padding: '8px 20px', borderRadius: '12px', textAlign: 'center', border: '2px solid #e8f4f8', cursor: 'pointer', transition: 'all 0.3s ease', width: '100%', color: '#565656', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }} 
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 75, 73, 0.15)'; }} 
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+              <img src={cuteImg} alt="AI Analiz" style={{ width: '32px', height: '32px' }} />
+              AI Analiz
+            </button>
+          </div>
         </div>
 
         {/* Harita */}
@@ -253,6 +425,63 @@ const OperatorDashboard = () => {
                   </button>
                   <button onClick={() => handleDeleteScooter(scooter.id)} style={{ width: '40px', height: '40px', background: '#F5F1E8', border: '1px solid #e74c3c', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#E8E3D0'; e.currentTarget.style.transform = 'scale(1.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#F5F1E8'; e.currentTarget.style.transform = 'scale(1)'; }} title="Sil">
                     <img src={kutuImg} alt="Sil" style={{ width: '24px', height: '24px' }} />
+                  </button>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+        {incidents.map((incident: Incident) => (
+          <Marker key={`incident-${incident.id}`} position={[incident.lat, incident.lon]} icon={getIncidentIcon(incident.severity)}>
+            <Popup>
+              <div style={{ background: '#fff5f5', padding: '12px', borderRadius: '12px', minWidth: '180px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '2px solid #e74c3c' }}>
+                <strong style={{ fontSize: '13px', color: '#e74c3c', display: 'block', marginBottom: '8px', fontWeight: '800' }}>🚨 {INCIDENT_LABELS[incident.type] || incident.type}</strong>
+                
+                <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#565656', fontWeight: '600' }}>Adres: {incident.address || 'Bilinmiyor'}</p>
+                
+                <div style={{ margin: '6px 0', fontSize: '11px', color: '#90a4ae' }}>
+                  <span style={{ 
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: incident.severity === 'Yüksek' ? '#e74c3c' : incident.severity === 'Orta' ? '#f39c12' : '#3498db',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    marginRight: '6px'
+                  }}>
+                    {incident.severity || 'Orta'}
+                  </span>
+                  <span style={{ color: '#565656' }}>Rapor: {incident.report_count}</span>
+                </div>
+
+                {incident.operatorNotes && (
+                  <p style={{ margin: '6px 0', fontSize: '11px', color: '#004B49', fontStyle: 'italic', backgroundColor: '#f0f8fb', padding: '6px', borderRadius: '6px' }}>
+                    📝 {incident.operatorNotes}
+                  </p>
+                )}
+
+                {incident.briefExplanation && (
+                  <p style={{ margin: '6px 0', fontSize: '11px', color: '#004B49', backgroundColor: '#fffbf0', padding: '6px', borderRadius: '6px', borderLeft: '3px solid #f39c12' }}>
+                    📄 {incident.briefExplanation}
+                  </p>
+                )}
+
+                <div style={{ marginTop: '10px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => handleSelectIncident(incident)} 
+                    style={{ flex: 1, padding: '6px', background: '#004b48cd', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#003635'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#004b48cd'; }}
+                  >
+                    ✏️ Düzenle
+                  </button>
+                  <button 
+                    onClick={() => handleResolveIncident(incident.id)} 
+                    style={{ flex: 1, padding: '6px', background: '#1e272ed1', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1e272e'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#1e272ed1'; }}
+                  >
+                     Çöz
                   </button>
                 </div>
               </div>
@@ -610,6 +839,345 @@ const OperatorDashboard = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Olay Zenginleştirme Modal */}
+      {showIncidentModal && selectedIncident && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 4000, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}>
+          <form onSubmit={handleUpdateIncident} style={{ position: 'relative', backgroundColor: '#F5F1E8', padding: '35px', borderRadius: '20px', width: '550px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 30px 60px rgba(0,0,0,0.3)', border: '1px solid rgba(255, 183, 3, 0.2)' }}>
+            <button
+              type="button"
+              onClick={() => { setShowIncidentModal(false); setSelectedIncident(null); }}
+              style={{
+                position: 'absolute',
+                top: '25px',
+                right: '15px',
+                background: '#4a4a4a',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease',
+                padding: 0
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#2c2c2c'; e.currentTarget.style.transform = 'rotate(90deg)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#4a4a4a'; e.currentTarget.style.transform = 'rotate(0deg)'; }}
+            >
+              ✕
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+              <div style={{ fontSize: '40px' }}>🚨</div>
+              <div>
+                <h2 style={{ margin: '0 0 5px 0', color: '#565656', fontSize: '24px', fontWeight: '800' }}>Olay Düzenle</h2>
+                <p style={{ margin: 0, color: '#565656', fontSize: '13px' }}>{INCIDENT_LABELS[selectedIncident.type] || selectedIncident.type} - {selectedIncident.address || 'Bilinmiyor'}</p>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#f0f8fb', padding: '12px', borderRadius: '12px', borderLeft: '4px solid #00bcd4' }}>
+              <p style={{ margin: '0 0 6px 0', fontSize: '11px', fontWeight: '600', color: '#00bcd4', textTransform: 'uppercase' }}>İstatistikler</p>
+              <p style={{ margin: '0', fontSize: '13px', color: '#565656' }}>
+                📊 Rapor Sayısı: <strong>{selectedIncident.report_count}</strong> | 
+                📅 Tarih: <strong>{new Date(selectedIncident.createdAt).toLocaleDateString('tr-TR')}</strong>
+              </p>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#565656', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>⚠️ Önem Seviyesi</label>
+              <select
+                value={incidentFormData.severity}
+                onChange={(e) => setIncidentFormData({ ...incidentFormData, severity: e.target.value })}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '2px solid #e8f4f8', fontSize: '15px', fontFamily: 'inherit', transition: 'all 0.3s ease', background: '#f0f8fb', boxSizing: 'border-box' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#00bcd4'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(0, 188, 212, 0.1)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#e8f4f8'; e.currentTarget.style.background = '#f0f8fb'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <option value="Düşük">🟦 Düşük - Küçük Sorun</option>
+                <option value="Orta">🟨 Orta - Dikkat Gerekli</option>
+                <option value="Yüksek">🟥 Yüksek - Acil Müdahale</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#565656', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>📝 Operator Notları</label>
+              <textarea
+                placeholder="Örn: Kilitli scooter, ihtiyaç tespit, çevresel faktörler vb..."
+                value={incidentFormData.operatorNotes}
+                onChange={(e) => setIncidentFormData({ ...incidentFormData, operatorNotes: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #e8f4f8', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.3s ease', background: '#f0f8fb', boxSizing: 'border-box', resize: 'vertical', minHeight: '100px' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#00bcd4'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(0, 188, 212, 0.1)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#e8f4f8'; e.currentTarget.style.background = '#f0f8fb'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#90a4ae' }}>Bu notlar AI analizi için kullanılacak</p>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#565656', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>📄 Resmi Açıklama (AI için)</label>
+              <textarea
+                placeholder="Olayın resmi ve kısa açıklaması "
+                value={incidentFormData.briefExplanation}
+                onChange={(e) => setIncidentFormData({ ...incidentFormData, briefExplanation: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #e8f4f8', fontSize: '13px', fontFamily: 'inherit', transition: 'all 0.3s ease', background: '#f0f8fb', boxSizing: 'border-box', resize: 'vertical', minHeight: '80px' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#00bcd4'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(0, 188, 212, 0.1)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#e8f4f8'; e.currentTarget.style.background = '#f0f8fb'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#90a4ae' }}>Yapay zeka anomaly analizinde kullanılacak resmi açıklama</p>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '15px' }}>
+              <button type="submit" style={{ padding: '14px', background: '#004b48', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s ease', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', boxShadow: '0 4px 15px rgba(0, 75, 73, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 75, 73, 0.4)'; e.currentTarget.style.background = '#003635'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 75, 73, 0.3)'; e.currentTarget.style.background = '#004B49'; }}>
+                <span>✏️</span> Güncelle
+              </button>
+              <button 
+                type="button"
+                onClick={() => handleResolveIncident(selectedIncident.id)}
+                style={{ padding: '14px', background: '#ffb803', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.3s ease', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} 
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = '#003635'; }} 
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = '#004B49'; }}
+              >
+                <span>✔️</span> Çöz
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* AI Analiz Modal */}
+      {showAnalysisModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 4000, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}>
+          <div style={{ backgroundColor: '#F5F1E8', padding: '35px', borderRadius: '20px', width: '800px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 30px 60px rgba(0,0,0,0.3)', border: '1px solid rgba(255, 183, 3, 0.2)' }}>
+            <button
+              onClick={() => setShowAnalysisModal(false)}
+              style={{
+                position: 'absolute',
+                top: '25px',
+                right: '15px',
+                background: '#4a4a4a',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease',
+                padding: 0
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#2c2c2c';
+                e.currentTarget.style.transform = 'rotate(90deg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#4a4a4a';
+                e.currentTarget.style.transform = 'rotate(0deg)';
+              }}
+            >
+              ✕
+            </button>
+
+            {!analysisResults ? (
+              <div>
+                <h2 style={{ margin: '0 0 25px 0', color: '#565656', fontSize: '24px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img src={robotImg} alt="Robot" style={{ width: '32px', height: '32px' }} />
+                  AI Anomali Analizi
+                </h2>
+
+                <div style={{ backgroundColor: 'rgba(0, 75, 73, 0.15)', padding: '15px', borderRadius: '12px', marginBottom: '20px' }}>
+                  <p style={{ margin: '0 0 15px 0', fontSize: '13px', fontWeight: '600', color: '#004B49', textTransform: 'uppercase' }}>Tarih Aralığını Seç</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#004B49', display: 'block', marginBottom: '6px' }}>📅 Başlangıç Tarihi</label>
+                      <input
+                        type="date"
+                        value={analysisDateRange.startDate}
+                        onChange={(e) => setAnalysisDateRange({ ...analysisDateRange, startDate: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid #e8f4f8', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'white' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '600', color: '#004B49', display: 'block', marginBottom: '6px' }}>📅 Bitiş Tarihi</label>
+                      <input
+                        type="date"
+                        value={analysisDateRange.endDate}
+                        onChange={(e) => setAnalysisDateRange({ ...analysisDateRange, endDate: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid #e8f4f8', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', backgroundColor: 'white' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    onClick={handleAnalyzeIncidents}
+                    disabled={analysisLoading}
+                    style={{
+                      padding: '12px 40px',
+                      background: analysisLoading ? '#90a4ae' : 'rgba(255, 183, 3, 0.3)',
+                      color: '#004B49',
+                      border: '2px solid #ffb703',
+                      borderRadius: '12px',
+                      fontWeight: '700',
+                      cursor: analysisLoading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.3s ease',
+                      fontSize: '12px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      opacity: analysisLoading ? 0.6 : 1
+                    }}
+                    onMouseEnter={(e) => !analysisLoading && (e.currentTarget.style.transform = 'translateY(-4px)', e.currentTarget.style.boxShadow = '0 8px 20px rgba(255, 183, 3, 0.3)')}
+                    onMouseLeave={(e) => !analysisLoading && (e.currentTarget.style.transform = 'translateY(0)', e.currentTarget.style.boxShadow = 'none')}
+                  >
+                    {analysisLoading ? '⏳ Analiz Yapılıyor...' : '▶ Analiz Başlat'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h2 style={{ margin: '0 0 10px 0', color: '#565656', fontSize: '24px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={analizoperatorImg} alt="Analiz" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
+                    Analiz Sonuçları
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#90a4ae' }}>
+                    📈 {analysisResults.totalIncidentsAnalyzed} olay analiz edildi | ⏰ {new Date(analysisResults.analysisTimestamp).toLocaleString('tr-TR')}
+                  </p>
+                </div>
+
+                {/* Risk Assessment */}
+                <div style={{ backgroundColor: '#fff5f5', padding: '15px', borderRadius: '12px', marginBottom: '15px', borderLeft: '4px solid #e74c3c' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '700', color: '#e74c3c', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ⚠️ RİSK DEĞERLENDİRMESİ
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <p style={{ margin: '0 0 5px 0', fontSize: '11px', fontWeight: '600', color: '#565656', textTransform: 'uppercase' }}>Genel Risk Seviyesi</p>
+                      <div style={{ fontSize: '24px', fontWeight: '800', color: analysisResults.riskAssessment.overall === 'Critical' ? '#e74c3c' : analysisResults.riskAssessment.overall === 'High' ? '#f39c12' : analysisResults.riskAssessment.overall === 'Medium' ? '#f1c40f' : '#27ae60' }}>
+                        {analysisResults.riskAssessment.overall === 'Critical' ? '🔴 KRİTİK' : analysisResults.riskAssessment.overall === 'High' ? '🟠 YÜKSEK' : analysisResults.riskAssessment.overall === 'Medium' ? '🟡 ORTA' : '🟢 DÜŞÜK'}
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ margin: '0 0 5px 0', fontSize: '11px', fontWeight: '600', color: '#565656', textTransform: 'uppercase' }}>Tahmini Etki</p>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#565656', fontWeight: '600' }}>{analysisResults.riskAssessment.estimatedImpact}</p>
+                    </div>
+                  </div>
+                  {analysisResults.riskAssessment.focusAreas.length > 0 && (
+                    <div>
+                      <p style={{ margin: '0 0 8px 0', fontSize: '11px', fontWeight: '600', color: '#565656', textTransform: 'uppercase' }}>Dikkat Alanları</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {analysisResults.riskAssessment.focusAreas.map((area, idx) => (
+                          <span key={idx} style={{ background: '#e74c3c', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' }}>
+                            📍 {area}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Anomalies */}
+                {analysisResults.anomalies.length > 0 && (
+                  <div style={{ backgroundColor: '#fffbf0', padding: '15px', borderRadius: '12px', marginBottom: '15px', borderLeft: '4px solid #f39c12' }}>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#f39c12', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🚨 SAPTAMALAR ({analysisResults.anomalies.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {analysisResults.anomalies.map((anomaly, idx) => (
+                        <div key={idx} style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e8f4f8' }}>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: '700', color: '#565656' }}>
+                            {anomaly.pattern}
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: '#90a4ae' }}>
+                            <span>📊 Önem: <strong>{anomaly.severity}</strong></span>
+                            <span>🎯 Risk: <strong>{anomaly.riskLevel}</strong></span>
+                            {anomaly.affectedAreas.length > 0 && (
+                              <div style={{ gridColumn: '1 / -1' }}>
+                                <strong>Etkilenen Alanlar:</strong> {anomaly.affectedAreas.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Patterns */}
+                {analysisResults.patterns.length > 0 && (
+                  <div style={{ backgroundColor: '#f0f8fb', padding: '15px', borderRadius: '12px', marginBottom: '15px', borderLeft: '4px solid #00bcd4' }}>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#00bcd4', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      📈 PATERNLER ({analysisResults.patterns.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {analysisResults.patterns.map((pattern, idx) => (
+                        <div key={idx} style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e8f4f8' }}>
+                          <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: '700', color: '#565656' }}>
+                            {pattern.type}
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: '#90a4ae' }}>
+                            <span>🔄 Sıklık: <strong>{pattern.frequency}</strong></span>
+                            <span>📊 Trend: <strong>{pattern.trend === 'increasing' ? '📈 Artıyor' : pattern.trend === 'decreasing' ? '📉 Azalıyor' : '➡️ Sabit'}</strong></span>
+                            {pattern.locations.length > 0 && (
+                              <div style={{ gridColumn: '1 / -1' }}>
+                                <strong>Konumlar:</strong> {pattern.locations.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {analysisResults.recommendations.length > 0 && (
+                  <div style={{ backgroundColor: '#f0fff4', padding: '15px', borderRadius: '12px', marginBottom: '15px', borderLeft: '4px solid #27ae60' }}>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      ✅ TAVSİYELER ({analysisResults.recommendations.length})
+                    </h3>
+                    <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#565656', lineHeight: '1.6' }}>
+                      {analysisResults.recommendations.map((rec, idx) => (
+                        <li key={idx} style={{ marginBottom: '8px' }}>{rec}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowAnalysisModal(false)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#004B49',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    fontSize: '13px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#003635'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#004B49'}
+                >
+                  ✕ Kapat
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

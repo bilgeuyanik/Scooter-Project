@@ -29,6 +29,7 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
     image: null as string | null,
     lat: initialLat || 0,
     lon: initialLon || 0,
+    severity: 'Orta' as 'Düşük' | 'Orta' | 'Yüksek',
   });
 
   // Modal açıldığında reverse geocoding yap
@@ -156,6 +157,7 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
           type: formData.type,
           description: formData.description,
           image: formData.image || undefined,
+          severity: formData.severity,
         };
 
         console.log('🚨 Creating new incident:', incidentData);
@@ -173,6 +175,7 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
         image: null,
         lat: 0,
         lon: 0,
+        severity: 'Orta',
       });
 
       onClose();
@@ -341,6 +344,52 @@ export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({
               onFocus={(e) => e.currentTarget.style.borderColor = '#004B49'}
               onBlur={(e) => e.currentTarget.style.borderColor = '#444'}
             />
+          </div>
+
+          {/* Ciddiyet (Severity) */}
+          <div style={{ marginBottom: '20px' }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '10px',
+                fontWeight: '700',
+                color: '#e0e0e0',
+                fontSize: '14px',
+              }}
+            >
+              ⚠️ Ciddiyet *
+            </label>
+            <select
+              value={formData.severity}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, severity: e.target.value as 'Düşük' | 'Orta' | 'Yüksek' }))
+              }
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '2px solid #444',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                backgroundColor: '#1f1f1f',
+                color: '#e0e0e0',
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#004B49'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#444'}
+            >
+              <option value="Düşük" style={{ backgroundColor: '#2d2d2d', color: '#e0e0e0' }}>
+                🟦 Düşük - Küçük Sorun
+              </option>
+              <option value="Orta" style={{ backgroundColor: '#2d2d2d', color: '#e0e0e0' }}>
+                🟨 Orta - Dikkat Gerekli
+              </option>
+              <option value="Yüksek" style={{ backgroundColor: '#2d2d2d', color: '#e0e0e0' }}>
+                🟥 Yüksek - Acil Müdahale
+              </option>
+            </select>
           </div>
 
           {/* Resim Yükle */}

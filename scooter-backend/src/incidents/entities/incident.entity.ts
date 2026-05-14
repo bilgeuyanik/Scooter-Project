@@ -9,6 +9,12 @@ export enum IncidentType {
   OBJECT_ON_ROAD = 'Object on Road',
 }
 
+export enum IncidentSeverity {
+  LOW = 'Düşük',
+  MEDIUM = 'Orta',
+  HIGH = 'Yüksek',
+}
+
 @Entity('incidents')
 export class Incident {
   @PrimaryGeneratedColumn()
@@ -27,6 +33,14 @@ export class Incident {
   })
   type: IncidentType;
 
+  @Column({
+    type: 'enum',
+    enum: IncidentSeverity,
+    default: IncidentSeverity.MEDIUM,
+    nullable: true,
+  })
+  severity?: IncidentSeverity;
+
   @Column({ nullable: true })
   address?: string;
 
@@ -44,6 +58,12 @@ export class Incident {
 
   @Column({ default: false })
   isResolved: boolean;
+
+  @Column({ nullable: true, type: 'text' })
+  operatorNotes?: string;
+
+  @Column({ nullable: true, type: 'text' })
+  briefExplanation?: string;
 
   @Column({ nullable: true })
   reportedByUserId: number;

@@ -10,6 +10,7 @@ import { ScootersModule } from '../scooters/scooters.module';
 import { RideModule } from '../rides/ride.module';
 import { IncidentsModule } from '../incidents/incidents.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
+import { AiAnalysisModule } from '../ai-analysis/ai-analysis.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -28,6 +29,7 @@ import { GeocodingModule } from '../geocoding/geocoding.module';
     RideModule,
     IncidentsModule,
     GeocodingModule,
+    AiAnalysisModule,
   ],
 })
 export class AppModule {}
