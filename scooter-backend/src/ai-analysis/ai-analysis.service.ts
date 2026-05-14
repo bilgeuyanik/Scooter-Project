@@ -95,9 +95,7 @@ export class AiAnalysisService {
     return JSON.stringify(incidentData, null, 2);
   }
 
-  /**
-   * Call Gemini API for anomaly detection and analysis
-   */
+  
   async analyzeWithGemini(
     incidents: Incident[],
   ): Promise<AnomalyAnalysisResult> {
@@ -109,7 +107,8 @@ export class AiAnalysisService {
 
     const formattedData = this.formatIncidentsForAI(incidents);
 
-    const prompt = `Aşağıdaki trafik/scooter olay verilerini analiz et ve anomali tespiti yap:
+    const prompt = `Sen, akıllı şehir teknolojileri ve mikromobilite (scooter) operasyonları konusunda uzmanlaşmış bir Kıdemli Trafik Veri Analistisin. 
+Görevin, aşağıdaki tarihsel anomali verilerini analiz ederek şehir operatörleri için stratejik bir rapor hazırlamaktır.
 
 ${formattedData}
 
@@ -159,7 +158,7 @@ Yanıtı şu JSON yapısında ver (başka hiçbir şey yazma, sadece JSON):
       });
       const responseText = response.text;
 
-      // Extract JSON from response (Gemini might include markdown code blocks)
+      
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.warn('⚠️ API yanıtında JSON bulunamadı, offline moda geçiliyor');
