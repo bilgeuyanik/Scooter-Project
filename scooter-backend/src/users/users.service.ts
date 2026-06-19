@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'; // BadRequestException eklendi
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'; 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -109,7 +109,7 @@ export class UsersService {
       throw new NotFoundException('Kullanıcı bulunamadı');
     }
 
-    // Avatar'ı güncelle (base64 string olarak)
+    
     await this.usersRepository.update(userId, { avatar: avatarData });
 
     return { message: 'Avatar başarıyla güncellendi', avatar: avatarData };

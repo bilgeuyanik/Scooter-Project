@@ -11,7 +11,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { LocationProvider } from './contexts/LocationContext';
 import NotificationDisplay from './components/NotificationDisplay';
 
-// 🌙 Dark Mode Leaflet Popup Stili + Pointer Events Fix
+// Dark Mode Leaflet Popup Stili 
 const leafletDarkStyles = `
   .leaflet-map-container {
     pointer-events: auto !important;
@@ -103,7 +103,7 @@ const ProtectedRoute = ({ element, requiredRole }: { element: React.ReactNode; r
 };
 
 function App() {
-  // 🌙 Dark Mode Leaflet Popup Stilini DOM'a Ekle
+  
   useEffect(() => {
     const styleElement = document.createElement('style');
     styleElement.textContent = leafletDarkStyles;

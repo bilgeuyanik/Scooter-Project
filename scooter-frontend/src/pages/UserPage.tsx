@@ -13,18 +13,7 @@ import { IncidentMarker } from '../components/IncidentMarker';
 import { getIncidentTypeLabel } from '../constants/incidentTypes';
 
 
-// 🗺️ Harita tıklama event handler
-/*function MapClickHandler({ setModalLat, setModalLon, setShowIncidentModal }: any) {
-  useMapEvent('click', (e: any) => {
-    const { lat, lng } = e.latlng;
-    console.log('📍 Haritaya tıklandı:', lat, lng);
-    setModalLat(lat);
-    setModalLon(lng);
-    setShowIncidentModal(true);
-  });
-  return null;
-}*/
-// 1. DÜZELTME: MapClickHandler'ı marker tıklamalarını filtreleyecek şekilde güncelleyin
+
 function MapClickHandler({ setModalLat, setModalLon, setShowIncidentModal }: any) {
   useMapEvent('click', (e: any) => {
     // Tıklanan element bir marker ikonu ise (leaflet-marker-icon sınıfına sahipse)
@@ -42,7 +31,7 @@ function MapClickHandler({ setModalLat, setModalLon, setShowIncidentModal }: any
   return null;
 }
 
-// 🎯 Harita Zoom Bölümü - Seçilen Konuma SetView
+//  Harita Zoom Bölümü - Seçilen Konuma SetView
 function MapFlyTo({ selectedLocation }: any) {
   const map = useMap();
 
@@ -52,8 +41,7 @@ function MapFlyTo({ selectedLocation }: any) {
       const targetLon = parseFloat(selectedLocation.lon);
 
       if (!isNaN(targetLat) && !isNaN(targetLon)) {
-        // flyTo yerine setView kullanıyoruz ve animasyonu kapatıyoruz
-        // Bu sayede Marker'lar render edilirken harita kilitlenmeyecek!
+        
         map.setView([targetLat, targetLon], 16, {
           animate: false 
         });
@@ -77,16 +65,10 @@ const getScooterIcon = (battery: number) => {
   if (battery < 30) color = '#e74c3c';
   else if (battery < 70) color = '#f1c40f';
 
-  /*return L.divIcon({
-    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer;"></div>`,
-    className: 'custom-pin',
-    iconSize: [24, 24],
-    iconAnchor: [12, 24],
-    popupAnchor: [0, -24],
-  });*/
+ 
   return L.divIcon({
     html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
-    // DÜZELTME 3: leaflet-interactive eklendi!
+   
     className: 'custom-pin leaflet-interactive',
     iconSize: [24, 24],
     iconAnchor: [12, 24],
@@ -96,7 +78,7 @@ const getScooterIcon = (battery: number) => {
 
 // Haversine formülü ile iki konum arasındaki mesafeyi hesapla (km cinsinden)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Dünya'nın yarıçapı (km)
+  const R = 6371; 
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -145,7 +127,7 @@ const UserPage = () => {
   });
   const notifiedIncidentsRef = useRef<Set<number>>(new Set());
 
-  // 🔍 Arama Lokasyonu State'leri
+  //  Arama Lokasyonu State'leri
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -185,7 +167,7 @@ const UserPage = () => {
     }
   };
 
-  // 🔍 Konum Ara (Nominatim API)
+  // Konum Ara (Nominatim API)
   const handleSearchLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
@@ -288,7 +270,7 @@ const UserPage = () => {
         img.onload = async () => {
           // Canvas üzerinde resimi sıkıştır
           const canvas = document.createElement('canvas');
-          const size = 200; // 200x200 boyutunda (daha küçük)
+          const size = 200; // 200x200 boyutunda 
           canvas.width = size;
           canvas.height = size;
           
@@ -315,12 +297,12 @@ const UserPage = () => {
             }
             
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight, 0, 0, size, size);
-            const compressedData = canvas.toDataURL('image/jpeg', 0.65); // JPEG 65% kalitesi (daha küçük)
+            const compressedData = canvas.toDataURL('image/jpeg', 0.65); 
             
-            // State'e ekle (UI güncellemesi için)
+            
             setUserProfile({ ...userProfile, avatar: compressedData });
             
-            // Backend'e gönder
+           
             try {
               await api.patch('/users/update-avatar', {
                 avatar: compressedData
@@ -455,88 +437,17 @@ const UserPage = () => {
     }
   }, [selectedLocation?.lat, selectedLocation?.lon]);
 
-  // Yakındaki incidents güncellenince bildirim göster
- /* useEffect(() => {
-    console.log('🔄 useEffect 2 trigger - nearbyIncidents:', nearbyIncidents.length, 'items');
-    
-    // SADECE MANUEL ARAMA (selectedLocation) YAPILDIYSA BİLDİRİM GÖSTER
-    // GPS otomatik location'dan (userLocation) bildirim gösterme
-    if (!selectedLocation) {
-      console.log('⚠️ Manuel arama yapılmadığı için notification gösterilmeyecek (userLocation ignored)');
-      notifiedIncidentsRef.current.clear();
-      return;
-    }
-
-    // Resolved incidents'ları ref'ten temizle
-    const currentIncidentIds = new Set(nearbyIncidents.map(i => i.id));
-    notifiedIncidentsRef.current = new Set(
-      Array.from(notifiedIncidentsRef.current).filter(id => currentIncidentIds.has(id))
-    );
-    console.log('🧹 Ref temizlendi, kalan:', notifiedIncidentsRef.current.size);
-    
-    if (nearbyIncidents.length === 0) {
-      console.log('⚠️ nearbyIncidents boş, return');
-      return;
-    }
-
-    console.log('✅ Devam ediyor - selectedLocation:', selectedLocation);
-    const nearbyIncidentsToShow = nearbyIncidents.filter((incident) => {
-      if (incident.isResolved) {
-        console.log(`   ❌ Incident #${incident.id} resolved=true, skip`);
-        return false;
-      }
-      
-      const distance = calculateDistance(
-        selectedLocation.lat,
-        selectedLocation.lon,
-        incident.lat,
-        incident.lon
-      );
-      const show = distance <= 10;
-      console.log(`   📊 Incident #${incident.id}: ${incident.type}, distance=${distance.toFixed(2)}km, show=${show}`);
-      return show;
-    });
-
-    console.log(`✅ Filter sonrası incident sayısı: ${nearbyIncidentsToShow.length}`);
-
-    nearbyIncidentsToShow.forEach((incident) => {
-      const alreadyNotified = notifiedIncidentsRef.current.has(incident.id);
-      console.log(`   Checking incident #${incident.id}: alreadyNotified=${alreadyNotified}`);
-      
-      if (!alreadyNotified) {
-        const locationInfo = `📍 ${incident.address || 'Bilinmeyen konum'}`;
-        const descInfo = incident.description ? ` • ${incident.description}` : '';
-        const typeLabel = getIncidentTypeLabel(incident.type);
-        const title = `🚨 ${typeLabel} Olayı Yakında!`;
-        
-        console.log('🚨🚨🚨 NOTIFICATION OLUŞTURULUYOR 🚨🚨🚨');
-        console.log('   Title:', title);
-        console.log('   Message:', locationInfo + descInfo);
-        
-        addNotification(
-          `${locationInfo}${descInfo}`,
-          'incident',
-          undefined,
-          title
-        );
-        
-        notifiedIncidentsRef.current.add(incident.id);
-        console.log('✅ Notification gönderildi ve ref\'e eklendi');
-      }
-    });
-  }, [nearbyIncidents, selectedLocation, addNotification]);*/
-  // 2. Yakındaki incidents güncellenince bildirim göster
-  // 2. Yakındaki incidents güncellenince SADECE YENİ EKLENENLER için bildirim göster
+  
   useEffect(() => {
     console.log('🔄 useEffect 2 trigger - nearbyIncidents:', nearbyIncidents.length, 'items');
     
     // Arama yapılmadıysa çık
     if (!selectedLocation || nearbyIncidents.length === 0) {
-      // Konum değiştiğinde (yeni arama) ref'i sıfırlama, olayların geçmişini tutmaya devam et!
+      // Konum değiştiğinde  ref'i sıfırlama, olayların geçmişini tutmaya devam et
       return;
     }
 
-    // 1. Önce aktif olayları belirle (10km içinde ve çözülmemiş olanlar)
+    // Önce aktif olayları belirle 
     const activeNearbyIncidents = nearbyIncidents.filter((incident) => {
       if (incident.isResolved) return false;
       const distance = calculateDistance(
@@ -548,15 +459,15 @@ const UserPage = () => {
       return distance <= 10;
     });
 
-    // 2. Eğer bu konum için İLK defa olayları çekiyorsak, onları SESSİZCE ref'e kaydet (Bildirim GÖSTERME)
+    // Eğer bu konum için İLK defa olayları çekiyorsak, onları SESSİZCE ref'e kaydet 
     // Ref'in içi boşsa, demek ki sisteme yeni girdik veya harita yeni yüklendi
     if (notifiedIncidentsRef.current.size === 0) {
       console.log('🔇 İlk yükleme: Tüm mevcut olaylar sessizce kaydediliyor.');
       activeNearbyIncidents.forEach(incident => notifiedIncidentsRef.current.add(incident.id));
-      return; // İlk yüklemede bildirimleri basmayı engelle!
+      return; 
     }
 
-    // 3. Sistem zaten çalışıyor ve ref'in içi doluysa, GELENLERİN "YENİ" OLUP OLMADIĞINA BAK
+    //Sistem zaten çalışıyor ve ref'in içi doluysa, GELENLERİN "YENİ" OLUP OLMADIĞINA BAK
     activeNearbyIncidents.forEach((incident) => {
       const alreadyNotified = notifiedIncidentsRef.current.has(incident.id);
       
@@ -564,7 +475,7 @@ const UserPage = () => {
       // Çünkü IncidentContext'teki isGloballyNotified kontrol eder
       const isAlreadyGlobalNotified = isGloballyNotified(incident.id);
       
-      // Eğer olay ref'te yoksa VE GLOBAL olarak kaydedilmemişse, bu GERÇEKTEN YENİ bir olaydır!
+      // Eğer olay ref'te yoksa VE GLOBAL olarak kaydedilmemişse, bu GERÇEKTEN YENİ bir olaydır
       if (!alreadyNotified && !isAlreadyGlobalNotified) {
         const locationInfo = `📍 ${incident.address || 'Bilinmeyen konum'}`;
         const descInfo = incident.description ? ` • ${incident.description}` : '';
@@ -578,7 +489,7 @@ const UserPage = () => {
           title
         );
         
-        // Bildirimi gösterdikten sonra ref'e ekle ki tekrar göstermesin
+        
         notifiedIncidentsRef.current.add(incident.id);
         console.log('✅ YENİ olay bildirimi gönderildi:', incident.id);
       } else if (isAlreadyGlobalNotified) {
@@ -587,7 +498,7 @@ const UserPage = () => {
       }
     });
 
-    // 4. Çözülen veya 10km dışına çıkan olayları ref'ten temizle (Hafıza yönetimi)
+    //Çözülen veya 10km dışına çıkan olayları ref'ten temizle 
     const currentActiveIds = new Set(activeNearbyIncidents.map(i => i.id));
     notifiedIncidentsRef.current = new Set(
       Array.from(notifiedIncidentsRef.current).filter(id => currentActiveIds.has(id))
@@ -624,31 +535,7 @@ const UserPage = () => {
     return () => clearInterval(interval);
   }, [activeRide]);
 
-  // 📬 Global incidents broadcast'leri - DISABLED
-  // Sadece manual search sonrası notification gösterilmeli (useEffect line 376+)
-  // Bu useEffect kaldırıldı - çünkü selectedLocation olmadan popup'lar çıkıyordu
-  // useEffect(() => {
-  //   if (incidents && incidents.length > 0 && selectedLocation) {
-  //     incidents.forEach((incident: any) => {
-  //       if (!notifiedIncidentsRef.current.has(incident.id)) {
-  //         const typeLabel = getIncidentTypeLabel(incident.type);
-  //         const address = incident.address ? `📍 ${incident.address}` : '';
-  //         const description = incident.description ? `\n${incident.description}` : '';
-  //         const message = `${address}${description}`.trim();
-  //         
-  //         addNotification(
-  //           message || 'Yeni olay bildirimi',
-  //           'success',
-  //           undefined,
-  //           `🚨 ${typeLabel} Olayı Bildirildi`
-  //         );
-  //         
-  //         notifiedIncidentsRef.current.add(incident.id);
-  //         console.log('✅ Notification oluşturuldu:', incident.id);
-  //       }
-  //     });
-  //   }
-  // }, [incidents, addNotification]);
+ 
 
   // Mevcut scooterları filtrele (User: %20+ batarya ve available)
   const filteredScooters = scooters.filter((s: any) => {
@@ -866,7 +753,7 @@ const UserPage = () => {
         </div>
       </header>
 
-      {/* � Filtre Sidebar - Yakın Scooterlar ve Olaylar + Arama */}
+      {/* Filtre Sidebar - Yakın Scooterlar ve Olaylar + Arama */}
       <div style={{
         position: 'fixed',
         top: '80px',
@@ -1122,11 +1009,7 @@ const UserPage = () => {
         pointerEvents: 'auto'
       }}>
         <MapContainer 
-          /*</div>center={selectedLocation ? [selectedLocation.lat, selectedLocation.lon] : [userLocation?.lat || 41.0054, userLocation?.lon || 28.9758]} 
-          zoom={selectedLocation ? 15 : 13} 
-          style={{ height: '100%', width: '100%', pointerEvents: 'auto' }}
-          className="leaflet-map-container"*/
-          // center ve zoom dinamik olmamalı! Sadece ilk konumu vermeniz yeterli.
+        
   center={[userLocation?.lat || 41.0054, userLocation?.lon || 28.9758]} 
   zoom={13} 
   style={{ height: '100%', width: '100%', pointerEvents: 'auto' }}
@@ -1134,10 +1017,10 @@ const UserPage = () => {
         >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
         
-        {/* 🗺️ Harita tıklama handler - Olay bildirme modal açmak için */}
+        {/* Harita tıklama handler - Olay bildirme modal açmak için */}
         <MapClickHandler setModalLat={setModalLat} setModalLon={setModalLon} setShowIncidentModal={setShowIncidentModal} />
         
-        {/* 🎯 Harita otomatik zoom - Seçilen konuma flyTo */}
+        {/* Harita otomatik zoom - Seçilen konuma flyTo */}
         <MapFlyTo selectedLocation={selectedLocation} />
         
         {/* Kullanıcı Konumu Marker */}
@@ -1229,9 +1112,9 @@ const UserPage = () => {
                   incident.lat,
                   incident.lon
                 );
-                return distance <= searchRadius; // 10km içinde
+                return distance <= searchRadius; 
               }
-              return true; // Seçilen konum yoksa tümü göster
+              return true; 
             }
             return false;
           })
@@ -1340,7 +1223,7 @@ const UserPage = () => {
         </div>
       )}
 
-      {/* User Settings Panel - Google Style */}
+      {/* User Settings Panel  */}
       {showUserSettings && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 4500, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(8px)' }}>
           <div style={{ background: '#F5F1E8', borderRadius: '20px', width: '80%', maxWidth: '380px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 30px 60px rgba(0,0,0,0.4)', overflow: 'hidden', position: 'relative' }}>

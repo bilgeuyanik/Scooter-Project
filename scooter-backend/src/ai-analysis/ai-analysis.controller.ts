@@ -15,10 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 export class AiAnalysisController {
   constructor(private aiAnalysisService: AiAnalysisService) {}
 
-  /**
-   * Trigger AI anomaly detection analysis
-   * Only operators/admins can access
-   */
+  
   @Post('analyze')
   @UseGuards(AuthGuard)
   async analyzeIncidents(
@@ -28,9 +25,7 @@ export class AiAnalysisController {
     return this.aiAnalysisService.performAnalysis(startDate, endDate);
   }
 
-  /**
-   * Get incidents ready for AI analysis (debugging/preview)
-   */
+ 
   @Get('incidents-preview')
   @UseGuards(AuthGuard)
   async getIncidentsForAnalysis(

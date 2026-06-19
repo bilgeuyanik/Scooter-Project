@@ -1,4 +1,3 @@
-// 🇹🇷 Tüm Incident Tiplerine İlişkin Mapping'ler
 
 export const INCIDENT_ICONS: Record<string, string> = {
   Crash: '🚨',
@@ -16,7 +15,7 @@ export const INCIDENT_COLORS: Record<string, string> = {
   'Object on Road': '#FF6B35',
 };
 
-// 🇹🇷 Türkçe Type Etiketleri (Display amacıyla)
+
 export const INCIDENT_LABELS: Record<string, string> = {
   Crash: 'Kaza',
   Slowdown: 'Yavaşlama Alanı',
@@ -25,7 +24,7 @@ export const INCIDENT_LABELS: Record<string, string> = {
   'Object on Road': 'Yolda Engel',
 };
 
-// Form'da Seçim için Type'lar (value: key, label: Türkçe + emoji)
+
 export const INCIDENT_TYPES = [
   { value: 'Crash', label: '🚨 Kaza' },
   { value: 'Slowdown', label: '🚗 Yavaşlama Alanı' },
@@ -34,7 +33,7 @@ export const INCIDENT_TYPES = [
   { value: 'Object on Road', label: '⚠️ Yolda Engel' },
 ];
 
-// Helper Function - Type'ı Türkçe Label'a çevir
+
 export const getIncidentTypeLabel = (type: string): string => {
   const mapping: { [key: string]: string } = {
     'Crash': 'Kaza',
@@ -42,7 +41,7 @@ export const getIncidentTypeLabel = (type: string): string => {
     'Construction': 'İnşaat',
     'Lane closure': 'Şerit Kapatması',
     'Object on Road': 'Yolda Engel',
-    // Lowercase versiyonlar da ekle (eğer backend lowercase gönderirse)
+    
     'crash': 'Kaza',
     'slowdown': 'Yavaşlama Alanı',
     'construction': 'İnşaat',

@@ -8,20 +8,20 @@ export class Ride {
   id: number;
 
   @ManyToOne(() => User)
-  user: User; // Sürüşü yapan kişi
+  user: User; 
 
   @ManyToOne(() => Scooter)
-  scooter: Scooter; // Kullanılan araç
+  scooter: Scooter; 
 
   @CreateDateColumn()
-  startTime: Date; // Başlangıç zamanı (otomatik oluşur)
+  startTime: Date; 
 
   @Column({ type: 'timestamp', nullable: true })
-  endTime: Date; // Bitiş zamanı
+  endTime: Date; 
 
-  @Column({ default: 'ongoing' }) // Durum: devam ediyor veya bitti
+  @Column({ default: 'ongoing' }) 
   status: string;
 
   @Column({ type: 'float', nullable: true })
-  totalPrice: number; // Ücret
+  totalPrice: number; 
 }

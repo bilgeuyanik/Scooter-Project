@@ -35,29 +35,29 @@ export class GeocodingService {
         return undefined;
       }
 
-      // Detaylı adres formatı: Bina No., Cadde/Sokak, Mahalle, Şehir, Ülke
+      
       const parts: string[] = [];
 
-      // Bina numarası + Cadde/Sokak
+      
       if (address.house_number && address.road) {
         parts.push(`No: ${address.house_number} ${address.road}`);
       } else if (address.road) {
         parts.push(address.road);
       }
 
-      // Mahalle/Bölge
+      
       if (address.neighbourhood) {
         parts.push(address.neighbourhood);
       } else if (address.suburb) {
         parts.push(address.suburb);
       }
 
-      // İlçe (ilçe varsa ekle)
+      
       if (address.county) {
         parts.push(address.county);
       }
 
-      // Şehir/İl
+      
       if (address.city) {
         parts.push(address.city);
       } else if (address.town) {
@@ -66,7 +66,7 @@ export class GeocodingService {
         parts.push(address.village);
       }
 
-      // Ülke
+    
       if (address.country) {
         parts.push(address.country);
       }

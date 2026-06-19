@@ -7,7 +7,7 @@ interface IncidentReportModalProps {
   onClose: () => void;
   initialLat?: number;
   initialLon?: number;
-  incidentId?: number; // Mevcut incident'i report etmek için
+  incidentId?: number; 
 }
 
 export const IncidentReportModal: React.FC<IncidentReportModalProps> = ({

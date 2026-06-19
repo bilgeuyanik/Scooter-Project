@@ -43,9 +43,7 @@ export class AiAnalysisService {
     this.genAI = new GoogleGenAI({ apiKey: apiKey || '' });
   }
 
-  /**
-   * Fetch incidents within a date range for analysis
-   */
+  
   async getIncidentsForAnalysis(
     startDate?: Date,
     endDate?: Date,
@@ -63,17 +61,14 @@ export class AiAnalysisService {
       query.where('incident.createdAt <= :end', { end: endDate });
     }
 
-    // Get both resolved and unresolved incidents for complete analysis
+    
     return query
       .orderBy('incident.createdAt', 'DESC')
       .addOrderBy('incident.report_count', 'DESC')
-      .take(500) // Limit to last 500 incidents for API token efficiency
+      .take(500) 
       .getMany();
   }
 
-  /**
-   * Format incidents data for Gemini API consumption
-   */
   private formatIncidentsForAI(incidents: Incident[]): string {
     const incidentData = incidents.map((incident) => ({
       id: incident.id,
@@ -177,15 +172,12 @@ Yanıtı şu JSON yapısında ver (başka hiçbir şey yazma, sadece JSON):
       } as AnomalyAnalysisResult;
     } catch (error) {
       console.warn(`⚠️ Gemini API hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}. Offline moda geçiliyor...`);
-      // Fallback to offline simulator if API fails
+      
       return this.generateSmartAnalysis(incidents);
     }
   }
 
-  /**
-   * Generate smart analysis data using intelligent pattern recognition
-   * This is an offline AI simulator that doesn't require external APIs
-   */
+  
   private generateSmartAnalysis(incidents: Incident[]): AnomalyAnalysisResult {
     const highSeverityIncidents = incidents.filter(
       (i) => i.severity === 'Yüksek',
@@ -261,9 +253,7 @@ Yanıtı şu JSON yapısında ver (başka hiçbir şey yazma, sadece JSON):
     };
   }
 
-  /**
-   * Group incidents by location/address
-   */
+  
   private groupIncidentsByLocation(
     incidents: Incident[],
   ): Record<string, Incident[]> {
@@ -280,9 +270,6 @@ Yanıtı şu JSON yapısında ver (başka hiçbir şey yazma, sadece JSON):
     );
   }
 
-  /**
-   * Perform complete analysis: fetch incidents and analyze with Gemini
-   */
   async performAnalysis(
     startDate?: string,
     endDate?: string,
@@ -304,7 +291,7 @@ Yanıtı şu JSON yapısında ver (başka hiçbir şey yazma, sadece JSON):
       }
     }
 
-    // Default to last 7 days if no date range specified
+    
     if (!start && !end) {
       start = new Date();
       start.setDate(start.getDate() - 7);

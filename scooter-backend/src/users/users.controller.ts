@@ -39,7 +39,7 @@ export class UsersController {
   async updateAvatar(@Request() req: any, @Body() body: any) {
     const userId = req.user.sub;
     
-    // Body validation
+    
     if (!body || typeof body !== 'object') {
       throw new BadRequestException('Request body must be an object');
     }
@@ -48,7 +48,7 @@ export class UsersController {
       throw new BadRequestException('Avatar must be a valid base64 string');
     }
     
-    if (body.avatar.length > 5000000) { // 5MB limit
+    if (body.avatar.length > 5000000) { 
       throw new BadRequestException('Avatar size too large (max 5MB)');
     }
     

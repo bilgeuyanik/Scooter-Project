@@ -12,5 +12,5 @@ export class User {
   password!: string;
 
   @Column()
-  role!: string; // 'User' veya 'Operator' [cite: 25]
+  role!: string; 
 }

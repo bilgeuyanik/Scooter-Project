@@ -7,7 +7,7 @@ export interface Notification {
   id: string;
   message: string;
   type: NotificationType;
-  duration?: number; // milliseconds, undefined = permanent
+  duration?: number; 
   title?: string;
   icon?: string;
   actions?: Array<{
@@ -40,7 +40,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [showHistory, setShowHistory] = useState(false);
   const soundRef = useRef<HTMLAudioElement | null>(null);
 
-  // sessionStorage'dan history'yi yükle (sayfa refresh'lendikçe silinir)
+  // sessionStorage'dan history'yi yükle 
   React.useEffect(() => {
     console.log('ℹ️ Notification history sessionStorage\'dan yükleniyor');
     try {
@@ -55,7 +55,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   }, []);
 
-  // Notification history'yi sessionStorage'a kaydet (runtime'da değişince)
+  // Notification history'yi sessionStorage'a kaydet 
   React.useEffect(() => {
     try {
       sessionStorage.setItem('notificationHistory', JSON.stringify(notificationHistory));
@@ -67,7 +67,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Bildirim sesini oynat
   const playSound = useCallback(() => {
     try {
-      // Data URL olarak basit bir beep sesi oluştur
+      
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -90,7 +90,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const addNotification = useCallback(
     (message: string, type: NotificationType = 'info', duration = 4000, title?: string) => {
-      // Ensure message is a string
+      
       const msgStr = typeof message === 'string' ? message : String(message || 'Unknown error');
       
       const id = `${Date.now()}-${Math.random()}`;
@@ -104,10 +104,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         read: false,
       };
 
-      // Ekrana ekle
+      
       setNotifications((prev) => [notification, ...prev]);
 
-      // Geçmişe ekle (max 50) - sessionStorage'a kaydet (sayfa refresh'lendikçe silinir)
+      // Geçmişe ekle (max 50) - sessionStorage'a kaydet 
       setNotificationHistory((prev) => {
         const updated = [notification, ...prev].slice(0, 50);
         try {
@@ -126,7 +126,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         playSound();
       }
 
-      // Otomatik kaybolma
+      
       if (duration) {
         setTimeout(() => {
           removeNotification(id);

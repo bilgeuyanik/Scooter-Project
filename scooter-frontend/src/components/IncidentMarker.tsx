@@ -44,7 +44,7 @@ export const IncidentMarker: React.FC<IncidentMarkerProps> = ({
       return;
     }
     
-    // Popup'ı kapat
+    
     if (markerRef.current) {
       markerRef.current.closePopup();
     }
@@ -54,7 +54,7 @@ export const IncidentMarker: React.FC<IncidentMarkerProps> = ({
     console.log('✅ Report sent for incident:', incident.id);
   };
 
-  // Delete button'a tıklandığında
+  
   const handleDelete = () => {
     console.log('🗑️ Delete button clicked for incident:', incident.id);
     if (confirm('Bu olayı silmek istediğinize emin misiniz? Tüm kullanıcılar için silinecektir.')) {
@@ -67,26 +67,7 @@ export const IncidentMarker: React.FC<IncidentMarkerProps> = ({
     }
   };
 
-  // Custom HTML icon
- /* const htmlIcon = L.divIcon({
-    html: `
-      <div style="
-        font-size: 28px;
-        text-align: center;
-        line-height: 1;
-        filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
-        pointer-events: auto;
-        cursor: pointer;
-      ">
-        ${INCIDENT_ICONS[incident.type] || '⚠️'}
-      </div>
-    `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 40],
-    popupAnchor: [0, -40],
-    className: 'incident-icon',
-  });
-*/
+  
 const htmlIcon = L.divIcon({
     html: `
       <div style="
@@ -105,7 +86,7 @@ const htmlIcon = L.divIcon({
     iconSize: [40, 40],
     iconAnchor: [20, 40],
     popupAnchor: [0, -40],
-    // DÜZELTME 1: leaflet-interactive eklendi!
+   
     className: 'incident-icon leaflet-interactive', 
   });
 
@@ -127,7 +108,7 @@ const htmlIcon = L.divIcon({
   // Gradient arka planı incident türüne göre belirle
   const gradient = getIncidentGradientColor(incident.type);
 
-  // 🇹🇷 Type'ı Türkçe Label'a çevir
+  
   const typeLabel = getIncidentTypeLabel(incident.type);
 
   // Dark mode renkleri
@@ -138,22 +119,12 @@ const htmlIcon = L.divIcon({
   const darkBorder = isDarkMode ? '#444' : '#e0e0e0';
 
   return (
-    /*<Marker
-      ref={markerRef}
-      position={[parseFloat(incident.lat.toString()), parseFloat(incident.lon.toString())]}
-      icon={htmlIcon}
-      eventHandlers={{
-        click: () => {
-          console.log('🚨 Incident marker tıklandı:', incident.id);
-          markerRef.current?.openPopup();
-        }
-      }}
-    >*/
+   
    <Marker
       ref={markerRef}
       position={[parseFloat(incident.lat.toString()), parseFloat(incident.lon.toString())]}
       icon={htmlIcon}
-      // DÜZELTME 2: eventHandlers={...} KISMINI TAMAMEN SİLDİK
+      
       // React-Leaflet aşağıdaki Popup'ı gördüğü an tıklamayı otomatik bağlar.
     >
       <Popup
