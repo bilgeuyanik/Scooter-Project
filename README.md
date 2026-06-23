@@ -173,10 +173,6 @@ Bu proje MIT lisansı altında yayımlanmıştır.
 4. Branch'e push et (`git push origin feature/amazing-feature`)
 5. Pull Request aç
 
-## ✉️ İletişim
-
-Sorular veya öneriler için bizimle iletişime geçin.
-
 ---
 
 **Son Güncelleme**: 2026-06-19
